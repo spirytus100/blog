@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>j24</title>
+	<title>xxx</title>
 	<meta charset='utf-8'>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/css/bootstrap.min.css" rel="stylesheet">
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
-<body style='background-image: url("/images/crumpled_paper.jpg")'>
+<body>
 
 <?php
 	session_start();
@@ -112,7 +112,7 @@
 	
 	echo "<footer class='mt-auto'>
     		<div style='background-color: black; color: white; width: 100%; height: 100px; padding: 15px; text-align: center'>
-      			<p>Autor: j24</p>
+      			<p>Autor: xxx</p>
     		</div>
   		</footer>";
 
