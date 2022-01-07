@@ -18,7 +18,7 @@
         $comment = new Comment($conn, $post_id, $author, $content, $ip, $reply_to);
 
         if ($comment->save_or_error()) {
-            header("Location: postdetails.php?id=".$post_id);
+            header("Location: /../postdetails.php?id=".$post_id);
         } else {
             echo $comment->error_msg;
         }

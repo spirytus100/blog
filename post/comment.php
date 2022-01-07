@@ -60,14 +60,49 @@
             return $content;    
         }
 
+        function anti_spam($author_ip) {
+            $sql = "SELECT content FROM comments WHERE DATE(date) = CURDATE() AND ip = '$author_ip'";
+            $cursor = $this->conn->query($sql);
+
+            $i = 0;
+            $spam_count = 0;
+            $spam_list = array();
+
+            while ($row = $cursor->fetch_assoc()) {
+                $pot_spam = trim(strpbrk($row["content"], ":"), ": ");
+                if (!$pot_spam) {
+                    $pot_spam = $row["content"];
+                }
+                if ($i > 1) {
+                    foreach ($spam_list as $key=>$val) {
+                        similar_text($val, $pot_spam, $percent);
+                        if ($percent > 70) {
+                            $spam_count += 1;
+                            unset($spam_list[$key]);
+                            if ($spam_count > 5) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                array_push($spam_list, $pot_spam);
+                $i += 1;
+            }
+            return true;
+        }
+
         function prevent_flood($author_ip) {
+            if (!$this->anti_spam($author_ip)) {
+                return false;
+            }
+
             $sql = "SELECT MAX(date) FROM comments WHERE ip = '$author_ip'";
             $cursor = $this->conn->query($sql);
             if ($cursor) {
                 $row = $cursor->fetch_row();
                 $last_comment_date = strtotime($row[0]);
 
-                if ((time() - $last_comment_date) < 15) {
+                if ((time() - $last_comment_date) < rand(15, 90)) {
                         return false;
                 } else {
                     return $author_ip;
@@ -77,8 +112,45 @@
             }
         }
 
+        function prevent_db_overflow() {
+            $sql = "SELECT COUNT(id) FROM comments WHERE DATE(date) = CURDATE()";
+            $cursor = $this->conn->query($sql);
+
+            $last_hour = new DateInterval("PT1H");
+            $date_start = date_sub(date_create(), $last_hour);
+            $date_compare = date_sub($date_start, $last_hour);
+    
+            $compare_count = 0;
+            $curr_count = 0;
+    
+            while ($row = $cursor->fetch_assoc()) {
+                if ($date_compare < date_create($row["date"]) and date_create($row["date"]) < $date_start) {
+                    $compare_count += 1;
+                }
+                if (date_create($row["date"]) > $date_start) {
+                    $curr_count += 1;
+                }
+            }
+            
+            if ($compare_count != 0) {
+                if ($curr_count > pow($compare_count, 4)) {
+                    return false;
+                }
+            } else {
+                if ($curr_count > 40) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         function check_wrapper($content, $data_type) {
+            if (!$this->prevent_db_overflow()) {
+                return false;
+            }
+
             $content = $this->check_input($content);
+
             if ($data_type == "content") {
                 if (!$this->check_length($content, "content")) {
                     return false;
@@ -99,7 +171,7 @@
             } elseif (!$this->content) {
                 $this->error_msg = "Niedozwolone znaki lub niedozwolona długość komentarza";
             } elseif (!$this->author_ip) {
-                $this->error_msg = "Komentujesz zbyt szybko.";
+                $this->error_msg = "Komentujesz zbyt szybko lub zbyt często się powtarzasz.";
             } else {
                 if ($this->reply_to == 0) {
                     $stmt = $this->conn->prepare("INSERT INTO comments (post_id, author, ip, content) VALUES (?, ?, ?, ?)");
