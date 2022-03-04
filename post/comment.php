@@ -91,8 +91,30 @@
             return true;
         }
 
+        function prevent_tor_nodes($author_ip) {
+            file_put_contents("tor_nodes.txt", file_get_contents("https://check.torproject.org/torbulkexitlist"));
+        
+            if (!file("tor_nodes.txt") or date("d.m.Y", filemtime("tor_nodes.txt")) != date("d.m.Y")) {
+                return false;
+            }
+        
+            function strip_ip($ip) {
+                return str_replace("\n", "", $ip);
+            }
+        
+            $nodes = array_map("strip_ip", $nodes);
+            if (array_search($author_ip, $nodes)) {
+                return false;
+            }
+            return true;
+        }
+
         function prevent_flood($author_ip) {
             if (!$this->anti_spam($author_ip)) {
+                return false;
+            }
+
+            if (!$this->prevent_tor_nodes($author_ip)) {
                 return false;
             }
 
@@ -171,7 +193,7 @@
             } elseif (!$this->content) {
                 $this->error_msg = "Niedozwolone znaki lub niedozwolona długość komentarza";
             } elseif (!$this->author_ip) {
-                $this->error_msg = "Komentujesz zbyt szybko lub zbyt często się powtarzasz.";
+                $this->error_msg = "Komentujesz zbyt szybko, zbyt często się powtarzasz lub Twoje IP jest podejrzane.";
             } else {
                 if ($this->reply_to == 0) {
                     $stmt = $this->conn->prepare("INSERT INTO comments (post_id, author, ip, content) VALUES (?, ?, ?, ?)");
